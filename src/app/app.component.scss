@@ -1,0 +1,12 @@
+.layout {
+  display: flex;
+
+  .lnb {
+      position: absolute;
+  }
+
+  .content {
+    width: 100vw;
+    height: 100vh;
+  }
+}
