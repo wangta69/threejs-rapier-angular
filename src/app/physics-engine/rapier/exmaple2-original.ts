@@ -8,7 +8,6 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 import Stats from 'three/addons/libs/stats.module.js'
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js'
 import RAPIER from '@dimforge/rapier3d-compat'
-import {Rapier, World, Mesh, Body} from '../../../projects/ng-rapier-threejs/src/public-api';
 
 @Component({
 selector: 'app-root',
@@ -28,8 +27,7 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
   private delta!: number;
   private raycaster = new THREE.Raycaster()
   private mouse = new THREE.Vector2()
-  private world!:World
-  private rapier!:Rapier;
+  private world!:RAPIER.World;
   private stats!:Stats;
   private dynamicBodies!: [THREE.Object3D, RAPIER.RigidBody][];
   private cubeMesh!:THREE.Mesh;
@@ -38,9 +36,7 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
 
   private rapierDebugRenderer:any;
 
-  constructor(world: World, rapier: Rapier) {
-    this.world = world;
-    this.rapier = rapier;
+  constructor() {
   }
 
   ngOnInit() {
@@ -58,155 +54,60 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
 
   private async init() {
 
-    
-    this.world.clear()
-      .setContainer(this.domContainer.nativeElement)
-      .setScreen()
-      .setCamera({fov:95, near: 0.1, far: 100, position: [0, 2, 5]})
-      // .setCamera({fov:95, near: 0.1, far: 100})
-      .setRenderer({antialias: true})
-      .setLights({
-        type: 'spot',
-        position: [2.5, 5, 5],
-        angle: Math.PI / 3,
-        penumbra: 0.5,
-        castShadow: true,
-        shadow: {blurSamples: 10, radius: 5}
-      }).setLights({
-        type: 'spot',
-        intensity: Math.PI * 10,
-        position: [-2.5, 5, 5],
-        angle: Math.PI / 3,
-        penumbra: 0.5,
-        castShadow: true,
-        shadow: {blurSamples: 10, radius: 5}
-      })
-      .enableControls({damping: true, target:{x: 0, y: 1, z: 0}})
-      .enableHelpers({position: {x: 0, y: -75, z: 0}})
-      .update(); // requestAnimationFrame(this.update)
 
-      await this.rapier.initRapier(0.0, -9.81, 0.0);
-      this.rapier.enableRapierDebugRenderer();
+    await RAPIER.init() // This line is only needed if using the compat version
+    const gravity = new RAPIER.Vector3(0.0, -9.81, 0.0)
+    this.world = new RAPIER.World(gravity)
+    this.dynamicBodies = []
 
-      this.addRendererOption();
 
-      // this.world.camera.position.set(0, 2, 5);
-      this.createCubeMesh();
-      this.createFloorMesh();
-      this.createSphereMesh();
 
-      this.stats = new Stats()
-      document.body.appendChild(this.stats.dom)
-      
-      const gui = new GUI()
-      
-      const physicsFolder = gui.addFolder('Physics')
-      physicsFolder.add(this.rapier.world.gravity, 'x', -10.0, 10.0, 0.1)
-      physicsFolder.add(this.rapier.world.gravity, 'y', -10.0, 10.0, 0.1)
-      physicsFolder.add(this.rapier.world.gravity, 'z', -10.0, 10.0, 0.1)
-    // this.sceneWidth = this.domContainer.nativeElement.offsetWidth;
-    // this.sceneHeight  = this.domContainer.nativeElement.offsetHeight;
-    // // this.windowHalfX = window.innerWidth / 2;
-    // // this.windowHalfY = window.innerHeight / 2;
+
+    this.sceneWidth = this.domContainer.nativeElement.offsetWidth;
+    this.sceneHeight  = this.domContainer.nativeElement.offsetHeight;
+    // this.windowHalfX = window.innerWidth / 2;
+    // this.windowHalfY = window.innerHeight / 2;
 
 
     
-    // this.setScene(); // scene 구성
+    this.setScene(); // scene 구성
 
-    // this.rapierDebugRenderer = new RapierDebugRenderer(this.scene, this.world)
+    this.rapierDebugRenderer = new RapierDebugRenderer(this.scene, this.world)
 
-    // this.setCamera(); // 카메라 설정
-    // this.setRenderer(); // render 구성
+    this.setCamera(); // 카메라 설정
+    this.setRenderer(); // render 구성
 
-    // this.setLight(); //  조명 설정
-    // this.setOrbitController(); // controls 구
-    // this.setGridHelper();
+    this.setLight(); //  조명 설정
+    this.setOrbitController(); // controls 구
+    this.setGridHelper();
 
 
-    
+    this.createMesh();
+
 
     
  
    
 
 
-    // this.stats = new Stats()
-    // document.body.appendChild(this.stats.dom)
+    this.stats = new Stats()
+    document.body.appendChild(this.stats.dom)
     
-    // const gui = new GUI()
-    // gui.add(this.rapier.rapierDebugRenderer, 'enabled').name('Rapier Degug Renderer')
+    const gui = new GUI()
+    gui.add(this.rapierDebugRenderer, 'enabled').name('Rapier Degug Renderer')
     
-    // const physicsFolder = gui.addFolder('Physics')
-    // physicsFolder.add(this.rapier.world.gravity, 'x', -10.0, 10.0, 0.1)
-    // physicsFolder.add(this.rapier.world.gravity, 'y', -10.0, 10.0, 0.1)
-    // physicsFolder.add(this.rapier.world.gravity, 'z', -10.0, 10.0, 0.1)
-    // this.clock = new THREE.Clock();
+    const physicsFolder = gui.addFolder('Physics')
+    physicsFolder.add(this.world.gravity, 'x', -10.0, 10.0, 0.1)
+    physicsFolder.add(this.world.gravity, 'y', -10.0, 10.0, 0.1)
+    physicsFolder.add(this.world.gravity, 'z', -10.0, 10.0, 0.1)
+    this.clock = new THREE.Clock();
 
-    // this.update(); // 화면을 계속해서 새로이 그린다.
+    this.update(); // 화면을 계속해서 새로이 그린다.
   }
 
   ngOnDestroy() {
   }
 
-
-  private async createCubeMesh() {
-  
-    const meshObj = new Mesh();
-    const mesh = await meshObj.create({
-      geometry: {type: 'box', width: 1, height: 1, depth: 1}, // geometry 속성
-      material: {type: 'normal'}, // material 속성
-      mesh: { castShadow: true}
-    });
-    this.world.scene.add(mesh);
-
-    // Rapier 생성
-    const body: Body = new Body(this.rapier);
-    await body.create({
-      collider: {
-        type:'dynamic', mass:1, restitution: 0.5, position:new THREE.Vector3(0, 5, 0),
-      },
-      object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
-    });
-  }
-
-  private async createFloorMesh() {
-  
-    const meshObj = new Mesh();
-    const mesh = await meshObj.create({
-      geometry: {type: 'box', width: 100, height: 1, depth: 100}, // geometry 속성
-      material: {type: 'phong'}, // material 속성
-      mesh: {receiveShadow: true}
-    });
-
-    this.world.scene.add(mesh);
-
-    // Rapier 생성
-    const body: Body = new Body(this.rapier);
-    await body.create({
-      collider: {type:'fixed', position: new THREE.Vector3(0, -1, 0)},
-      object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
-    });
-  }
-
-  private async createSphereMesh() {
-  
-    const meshObj = new Mesh();
-    const mesh = await meshObj.create({
-      geometry: {type: 'sphere'}, // geometry 속성
-      material: {type: 'normal'}, // material 속성
-      mesh: {receiveShadow: true}
-    });
-
-    this.world.scene.add(mesh);
-
-    // Rapier 생성
-    const body: Body = new Body(this.rapier);
-    await body.create({
-      collider: {type:'dynamic', shape: 'ball', mass:1, restitution: 0.5, position:new THREE.Vector3(-2.5, 5, 0)},
-      object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
-    });
-  }
-  /*
   private createMesh() {
     // Cuboid Collider
     const cubeMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshNormalMaterial())
@@ -288,9 +189,9 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
     const raycaster = new THREE.Raycaster()
     const mouse = new THREE.Vector2()
   }
-*/
 
-/*
+
+
   private setRenderer() {
     this.renderer = new THREE.WebGLRenderer({antialias: true}); // renderer with transparent backdrop
     this.renderer.setSize(window.innerWidth, window.innerHeight)
@@ -322,38 +223,10 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
   })
 
   }
-  */
 
-  private addRendererOption() {
-      // this.renderer = new THREE.WebGLRenderer({antialias: true}); // renderer with transparent backdrop
-      this.world.renderer.setSize(window.innerWidth, window.innerHeight)
-      this.world.renderer.shadowMap.enabled = true
-      this.world.renderer.shadowMap.type = THREE.VSMShadowMap
-      // this.domContainer.nativeElement.appendChild(this.world.renderer.domElement);
-  
-      this.world.renderer.domElement.addEventListener('click', (e) => {
-  
-        this.mouse.set(
-          (e.clientX / this.world.renderer.domElement.clientWidth) * 2 - 1,
-          -(e.clientY / this.world.renderer.domElement.clientHeight) * 2 + 1
-        )
-        this.raycaster.setFromCamera(this.mouse, this.world.camera)
-        const intersects = this.raycaster.intersectObjects(
-          this.rapier.dynamicBodies.flatMap((a) => a.object3d), // , sphereMesh, cylinderMesh, icosahedronMesh, torusKnotMesh
-          false
-        )
-        if (intersects.length) {
-          this.rapier.dynamicBodies.forEach((b) => {
-            console.log('b:', b);
-            b.object3d === intersects[0].object && b.rigidBody.applyImpulse(new RAPIER.Vector3(0, 10, 0), true)
-          })
-        }
-      })
-    }
-
-  // private setScene() {
-  //   this.scene = new THREE.Scene(); // the 3d scene
-  // }
+  private setScene() {
+    this.scene = new THREE.Scene(); // the 3d scene
+  }
 
   // 카메라 관련 정의 시작
   private setCamera() {
@@ -373,12 +246,12 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
     this.controls.target.y = 1;
   }
 
-  // private setGridHelper() {
-  //   const helper = new THREE.GridHelper( 1000, 40, 0x303030, 0x303030 );
-  //   helper.position.y = -75;
-  //   this.scene.add( helper );
-  // }
-/*
+  private setGridHelper() {
+    const helper = new THREE.GridHelper( 1000, 40, 0x303030, 0x303030 );
+    helper.position.y = -75;
+    this.scene.add( helper );
+  }
+
   private setLight() {
     const light1 = new THREE.SpotLight(undefined, Math.PI * 10)
     light1.angle = Math.PI / 1.8
@@ -404,7 +277,7 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
       this.dynamicBodies[i][0].quaternion.copy(this.dynamicBodies[i][1].rotation())
     }
 
-    // this.car.update()
+    this.car.update()
 
     this.rapierDebugRenderer.update()
 
@@ -414,11 +287,11 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
 
     this.stats.update()
   }
-*/
-  // private update = () => {
-  //   this.render();
-  //   requestAnimationFrame(this.update); // request next update
-  // }
+
+  private update = () => {
+    this.render();
+    requestAnimationFrame(this.update); // request next update
+  }
 }
 
 
@@ -429,20 +302,25 @@ class RapierDebugRenderer {
 
   constructor(scene:THREE.Scene, world:RAPIER.World) {
       this.world = world
-      this.mesh = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff, vertexColors: true }))
+      this.mesh = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ 
+        color: 0xffffff, vertexColors: true
+      }))
       this.mesh.frustumCulled = false
       scene.add(this.mesh)
   }
 
   update() {
-    if (this.enabled) {
-      const { vertices, colors } = this.world.debugRender()
-      this.mesh.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
-      this.mesh.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4))
-      this.mesh.visible = true
-    } else {
-      this.mesh.visible = false
-    }
+      if (this.enabled) {
+          const { vertices, colors } = this.world.debugRender()
+          // console.log('vertices:', vertices);
+          // console.log('colors:', colors);
+          // console.log('this.mesh:', this.mesh);
+          this.mesh.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
+          this.mesh.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4))
+          this.mesh.visible = true
+      } else {
+          this.mesh.visible = false
+      }
   }
 }
 
