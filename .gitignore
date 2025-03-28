@@ -43,3 +43,4 @@ testem.log
 Thumbs.db
 projects/ng-rapier-threejs
 projects/ng-rapier-threejs
+/projects
