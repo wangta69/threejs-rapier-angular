@@ -20,14 +20,14 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
 
   private renderer!: THREE.WebGLRenderer;
   private camera!: THREE.PerspectiveCamera;
-  private scene!: THREE.Scene;
+  public scene!: THREE.Scene;
   private controls: any;
 
   private clock = new THREE.Clock();
   private delta!: number;
   private raycaster = new THREE.Raycaster()
   private mouse = new THREE.Vector2()
-  private world!:RAPIER.World;
+  public world!:RAPIER.World;
   private stats!:Stats;
   private dynamicBodies!: [THREE.Object3D, RAPIER.RigidBody][];
   private cubeMesh!:THREE.Mesh;
@@ -110,79 +110,106 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
 
   private createMesh() {
     // Cuboid Collider
-    const cubeMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshNormalMaterial())
-    cubeMesh.castShadow = true
-    this.scene.add(cubeMesh)
-    const cubeBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(-5, 5, 0).setCanSleep(false))
-    const cubeShape = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5).setMass(1).setRestitution(0.5)
-    this.world.createCollider(cubeShape, cubeBody)
-    this.dynamicBodies.push([cubeMesh, cubeBody])
+    // const cubeMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshNormalMaterial())
+    // cubeMesh.castShadow = true
+    // this.scene.add(cubeMesh)
+    // const cubeBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(-5, 5, 0).setCanSleep(false))
+    // const cubeShape = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5).setMass(1).setRestitution(0.5)
+    // this.world.createCollider(cubeShape, cubeBody)
+    // this.dynamicBodies.push([cubeMesh, cubeBody])
 
     // Ball Collider
-    const sphereMesh = new THREE.Mesh(new THREE.SphereGeometry(), new THREE.MeshNormalMaterial())
-    sphereMesh.castShadow = true
-    this.scene.add(sphereMesh)
-    const sphereBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(-2.5, 5, 0).setCanSleep(false))
-    const sphereShape = RAPIER.ColliderDesc.ball(1).setMass(1).setRestitution(0.5)
-    this.world.createCollider(sphereShape, sphereBody)
-    this.dynamicBodies.push([sphereMesh, sphereBody])
+    // const sphereMesh = new THREE.Mesh(new THREE.SphereGeometry(), new THREE.MeshNormalMaterial())
+    // sphereMesh.castShadow = true
+    // this.scene.add(sphereMesh)
+    // // const sphereBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(-2.5, 5, 0).setCanSleep(false))
+    // // const sphereShape = RAPIER.ColliderDesc.ball(1).setMass(1).setRestitution(0.5)
+    // const sphereBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(-2.5, 5, 0);
+    // const sphereBody = this.world.createRigidBody(sphereBodyDesc)
+    // const sphereShape = RAPIER.ColliderDesc.ball(1).setRestitution(0.5);
+    // console.log('sphereBodyDesc:', sphereBodyDesc);
+    // console.log('sphereShape:', sphereShape);
+    // this.world.createCollider(sphereShape, sphereBody)
+    // this.dynamicBodies.push([sphereMesh, sphereBody])
 
-    // Cylinder Collider
-    const cylinderMesh = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 2, 16), new THREE.MeshNormalMaterial())
-    cylinderMesh.castShadow = true
-    this.scene.add(cylinderMesh)
-    const cylinderBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 5, 0).setCanSleep(false))
-    const cylinderShape = RAPIER.ColliderDesc.cylinder(1, 1).setMass(1).setRestitution(0.5)
-    this.world.createCollider(cylinderShape, cylinderBody)
-    this.dynamicBodies.push([cylinderMesh, cylinderBody])
 
-    // ConvexHull Collider
-    const icosahedronMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshNormalMaterial())
-    icosahedronMesh.castShadow = true
-    this.scene.add(icosahedronMesh)
-    const icosahedronBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(2.5, 5, 0).setCanSleep(false))
-    const points = new Float32Array((icosahedronMesh.geometry.attributes as any).position.array);
+
+    // const wheelFRBodyRigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+    //   .setTranslation(1, 1 , -1)
+    //   .setCanSleep(false);
+
+    //   const wheelFRBody = this.world.createRigidBody(
+    //       wheelFRBodyRigidBodyDesc
+    //   )
+
+    // const wheelFRShape = RAPIER.ColliderDesc.cylinder(0.1, 0.3)
+    //   .setRotation(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2))
+    //   .setTranslation(0.2, 0, 0)
+    //   .setRestitution(0.5)
+    // this.world.createCollider(wheelFRShape, wheelFRBody)
+
+ 
+    // // Cylinder Collider
+    // const cylinderMesh = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 2, 16), new THREE.MeshNormalMaterial())
+    // cylinderMesh.castShadow = true
+    // this.scene.add(cylinderMesh)
+    // const cylinderBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 5, 0).setCanSleep(false))
+    // const cylinderShape = RAPIER.ColliderDesc.cylinder(1, 1).setMass(1).setRestitution(0.5)
+    // this.world.createCollider(cylinderShape, cylinderBody)
+    // this.dynamicBodies.push([cylinderMesh, cylinderBody])
+
+    // // ConvexHull Collider
+    // const icosahedronMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshNormalMaterial())
+    // icosahedronMesh.castShadow = true
+    // this.scene.add(icosahedronMesh)
+    // const icosahedronBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(2.5, 5, 0).setCanSleep(false))
+    // const points = new Float32Array((icosahedronMesh.geometry.attributes as any).position.array);
    
 
-    const icosahedronShape = (RAPIER.ColliderDesc as any).convexHull(points).setMass(1).setRestitution(0.5)
-    this.world.createCollider(icosahedronShape, icosahedronBody)
-    this.dynamicBodies.push([icosahedronMesh, icosahedronBody])
+    // const icosahedronShape = (RAPIER.ColliderDesc as any).convexHull(points).setMass(1).setRestitution(0.5)
+    // this.world.createCollider(icosahedronShape, icosahedronBody)
+    // this.dynamicBodies.push([icosahedronMesh, icosahedronBody])
 
 
-    // Trimesh Collider
-    const torusKnotMesh = new THREE.Mesh(new THREE.TorusKnotGeometry(), new THREE.MeshNormalMaterial())
-    torusKnotMesh.castShadow = true
-    this.scene.add(torusKnotMesh)
-    const torusKnotBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(5, 5, 0))
-    const vertices = new Float32Array((torusKnotMesh.geometry.attributes as any).position.array)
-    let indices = new Uint32Array((torusKnotMesh.geometry.index as any).array)
-    const torusKnotShape = RAPIER.ColliderDesc.trimesh(vertices, indices).setMass(1).setRestitution(0.5)
-    this.world.createCollider(torusKnotShape, torusKnotBody)
-    this.dynamicBodies.push([torusKnotMesh, torusKnotBody])
+    // // Trimesh Collider
+    // const torusKnotMesh = new THREE.Mesh(new THREE.TorusKnotGeometry(), new THREE.MeshNormalMaterial())
+    // torusKnotMesh.castShadow = true
+    // this.scene.add(torusKnotMesh)
+    // const torusKnotBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(5, 5, 0))
+    // const vertices = new Float32Array((torusKnotMesh.geometry.attributes as any).position.array)
+    // let indices = new Uint32Array((torusKnotMesh.geometry.index as any).array)
+    // const torusKnotShape = RAPIER.ColliderDesc.trimesh(vertices, indices).setMass(1).setRestitution(0.5)
+    // this.world.createCollider(torusKnotShape, torusKnotBody)
+    // this.dynamicBodies.push([torusKnotMesh, torusKnotBody])
 
     // the floor (using a cuboid)
+
     const floorMesh = new THREE.Mesh(new THREE.BoxGeometry(50, 1, 50), new THREE.MeshPhongMaterial())
     floorMesh.receiveShadow = true
     floorMesh.position.y = -1
     this.scene.add(floorMesh)
-    const floorBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -1, 0))
+    const floorBodyRigidBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, -1, 0);
+    const floorBody = this.world.createRigidBody(floorBodyRigidBodyDesc)
     const floorShape = RAPIER.ColliderDesc.cuboid(25, 0.5, 25)
     this.world.createCollider(floorShape, floorBody)
 
-    // creating a shape from a loaded geometry. (Using OBJLoader)
-    new OBJLoader().loadAsync('/assets/suzanne.obj').then((object) => {
-        //console.log(object)
-        this.scene.add(object)
-        const suzanneMesh: any = object.getObjectByName('Suzanne')                
-        suzanneMesh.material = new THREE.MeshNormalMaterial()
-        suzanneMesh.castShadow = true
+    console.log('rigidBodyDesc: ', floorBodyRigidBodyDesc);
+    console.log('ColliderDesc: ', floorShape);
 
-        const suzanneBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(-1, 10, 0).setCanSleep(false))
-        const points = new Float32Array(suzanneMesh.geometry.attributes.position.array)
-        const suzanneShape = (RAPIER.ColliderDesc as any).convexHull(points).setMass(1).setRestitution(0.5)
-        this.world.createCollider(suzanneShape, suzanneBody)
-        this.dynamicBodies.push([suzanneMesh, suzanneBody])
-    })
+    // creating a shape from a loaded geometry. (Using OBJLoader)
+    // new OBJLoader().loadAsync('/assets/suzanne.obj').then((object) => {
+    //     //console.log(object)
+    //     this.scene.add(object)
+    //     const suzanneMesh: any = object.getObjectByName('Suzanne')                
+    //     suzanneMesh.material = new THREE.MeshNormalMaterial()
+    //     suzanneMesh.castShadow = true
+
+    //     const suzanneBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(-1, 10, 0).setCanSleep(false))
+    //     const points = new Float32Array(suzanneMesh.geometry.attributes.position.array)
+    //     const suzanneShape = (RAPIER.ColliderDesc as any).convexHull(points).setMass(1).setRestitution(0.5)
+    //     this.world.createCollider(suzanneShape, suzanneBody)
+    //     this.dynamicBodies.push([suzanneMesh, suzanneBody])
+    // })
 
     this.car = new Car(this, [0, 2, 0])
 
@@ -277,6 +304,7 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
       this.dynamicBodies[i][0].quaternion.copy(this.dynamicBodies[i][1].rotation())
     }
 
+
     this.car.update()
 
     this.rapierDebugRenderer.update()
@@ -327,8 +355,8 @@ class RapierDebugRenderer {
 
 class Car {
   dynamicBodies: any = []
-  private game;
-  constructor(game: any, position:number[] = [0, 0, 0]) {
+  private game: RapierSample2Component;
+  constructor(game: RapierSample2Component, position:number[] = [0, 0, 0]) {
     this.game = game;
       new GLTFLoader().loadAsync('/assets/sedanSports.glb').then((gltf) => {
           //console.log(gltf.scene)
@@ -350,7 +378,7 @@ class Car {
 
           //scene.add(gltf.scene)
           this.game.scene.add(carMesh, wheelBLMesh, wheelBRMesh, wheelFLMesh, wheelFRMesh)
-
+          // this.game.scene.add( wheelFRMesh)
           // const newObject = [...position];
           const carBody = this.game.world.createRigidBody(
               RAPIER.RigidBodyDesc.dynamic()
@@ -374,10 +402,13 @@ class Car {
                   .setTranslation(-1 + position[0], 1 + position[1], -1 + position[2])
                   .setCanSleep(false)
           )
+
+          const wheelFRBodyRigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+          .setTranslation(1 + position[0], 1 + position[1], -1 + position[2])
+          .setCanSleep(false);
+          console.log('wheelFRBodyRigidBodyDesc:', wheelFRBodyRigidBodyDesc);
           const wheelFRBody = this.game.world.createRigidBody(
-              RAPIER.RigidBodyDesc.dynamic()
-                  .setTranslation(1 + position[0], 1 + position[1], -1 + position[2])
-                  .setCanSleep(false)
+              wheelFRBodyRigidBodyDesc
           )
 
           // create a convexhull from all meshes in the carMesh group
@@ -397,6 +428,7 @@ class Car {
 
           // create shapes for carBody and wheelBodies
           const carShape = (RAPIER.ColliderDesc as any).convexHull(new Float32Array(positions)).setMass(1).setRestitution(0.5)
+          
           const wheelBLShape = RAPIER.ColliderDesc.cylinder(0.1, 0.3)
               .setRotation(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2))
               .setTranslation(-0.2, 0, 0)
@@ -414,6 +446,7 @@ class Car {
               .setTranslation(0.2, 0, 0)
               .setRestitution(0.5)
 
+              console.log('wheelFRShape:', wheelFRShape);
           // create world collider
           this.game.world.createCollider(carShape, carBody)
           this.game.world.createCollider(wheelBLShape, wheelBLBody)
@@ -457,6 +490,7 @@ class Car {
   }
 
   update() {
+
       for (let i = 0, n = this.dynamicBodies.length; i < n; i++) {
           this.dynamicBodies[i][0].position.copy(this.dynamicBodies[i][1].translation())
           this.dynamicBodies[i][0].quaternion.copy(this.dynamicBodies[i][1].rotation())
