@@ -22,6 +22,7 @@
     "@angular/router": "^19.1.0",
     "dat.gui": "^0.7.9",
     "gsap": "^3.12.7",
+    "ng-rapier-threejs": "^0.0.2",
     "rxjs": "~7.8.0",
     "three": "^0.173.0",
     "tslib": "^2.3.0",
@@ -41,6 +42,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "ng-packagr": "^19.1.0",
     "typescript": "~5.7.2"
   }
 }

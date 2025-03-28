@@ -99,6 +99,39 @@
           }
         }
       }
+    },
+    "ng-rapier-threejs": {
+      "projectType": "library",
+      "root": "projects/ng-rapier-threejs",
+      "sourceRoot": "projects/ng-rapier-threejs/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:ng-packagr",
+          "options": {
+            "project": "projects/ng-rapier-threejs/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/ng-rapier-threejs/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/ng-rapier-threejs/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "tsConfig": "projects/ng-rapier-threejs/tsconfig.spec.json",
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ]
+          }
+        }
+      }
     }
   },
   "cli": {

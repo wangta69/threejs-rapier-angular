@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import RAPIER from '@dimforge/rapier3d-compat';
-import {Rapier, World, Mesh, Body} from '../../../projects/ng-rapier-threejs/src/public-api';
-
+// import {Rapier, World, Mesh, Body} from '../../../projects/ng-rapier-threejs/src/public-api';
+import {Rapier, World, Mesh, Body} from 'ng-rapier-threejs';
 @Component({
 selector: 'app-root',
 templateUrl: './scene.html',
@@ -70,8 +70,6 @@ export class RapierSample1Component implements AfterViewInit { // , AfterViewIni
 
     this.addRendererOption();
 
-    // this.world.camera.position.set(0, 2, 5);
-
     this.createCubeMesh();
     this.createFloorMesh();
 
@@ -90,10 +88,9 @@ export class RapierSample1Component implements AfterViewInit { // , AfterViewIni
 
     const mesh = new Mesh();
     this.cubeMesh = await mesh.create({
-      geometry: {type: 'box', width: 1, height: 1, depth: 1}, // geometry 속성
+      geometry: {type: 'box', args:[1, 1, 1]}, // geometry 속성
       material: {type: 'normal'}, // material 속성
       mesh: { //  mesh 속성
-        position:new THREE.Vector3(0, 5, 0),
         castShadow: true,
       }
     });
@@ -102,12 +99,8 @@ export class RapierSample1Component implements AfterViewInit { // , AfterViewIni
     // Rapier 생성
     const body: Body = new Body(this.rapier);
     await body.create({
-      collider: {
-        type:'dynamic',
-        mass:1, restitution: 0.1,
-        userData: {name: 'obstacle'},
-        canSleep: false,
-      },
+      body: {type: 'dynamic', translation:new THREE.Vector3(0, 5, 0), canSleep: false, userData: {name: 'box'}},
+      collider: {mass:1, restitution: 0.1},
       object3d: this.cubeMesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
     });
   }
@@ -116,12 +109,11 @@ export class RapierSample1Component implements AfterViewInit { // , AfterViewIni
 
     const mesh = new Mesh();
     const floorMesh = await mesh.create({
-      geometry: {type: 'box', width: 100, height: 1, depth: 100}, // geometry 속성
+      geometry: {type: 'box', args: [50, 1, 50]}, // geometry 속성
       material: {type: 'phong'}, // material 속성
       mesh: { //  mesh 속성
         receiveShadow: true,
         // receiveShadow: true
-        position: new THREE.Vector3(0, -1, 0),
       }
     });
 
@@ -130,13 +122,8 @@ export class RapierSample1Component implements AfterViewInit { // , AfterViewIni
     // Rapier 생성
     const body: Body = new Body(this.rapier);
     await body.create({
-      collider: {
-        type:'fixed',
-        mass:1, restitution: 1.1,
-        userData: {name: 'obstacle'},
-        canSleep: false,
-        translation: [0, -1, 0]
-      },
+      body: {type: 'fixed', canSleep: false, userData: {name: 'floor'}},
+      collider: {mass:1, restitution: 1.1},
       object3d: floorMesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
     });
   }

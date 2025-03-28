@@ -5,8 +5,7 @@ import * as THREE from 'three';
 import Stats from 'three/addons/libs/stats.module.js'
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js'
 import RAPIER from '@dimforge/rapier3d-compat'
-import {Rapier, World, Mesh, Body} from '../../../projects/ng-rapier-threejs/src/public-api';
-
+import {Rapier, World, Mesh, Body} from 'ng-rapier-threejs';
 @Component({
 selector: 'app-root',
 templateUrl: './scene.html',
@@ -120,7 +119,7 @@ export class RapierSample2Component implements AfterViewInit {
     // Rapier 생성
     const body: Body = new Body(this.rapier);
     await body.create({
-      body: {type:'dynamic', translation:new THREE.Vector3(0, 5, 0), cansleep: false},
+      body: {type:'dynamic', translation:new THREE.Vector3(0, 5, 0), canSleep: false},
       collider: {mass:1, restitution: 0.5},
       object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
     });
@@ -139,7 +138,7 @@ export class RapierSample2Component implements AfterViewInit {
     // Rapier 생성
     const body: Body = new Body(this.rapier);
     await body.create({
-      body: {type:'dynamic', translation: new THREE.Vector3(-2.5, 5, 0), cansleep: false},
+      body: {type:'dynamic', translation: new THREE.Vector3(-2.5, 5, 0), canSleep: false},
       collider: {shape: 'ball', restitution: 0.5},
       object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
     });
@@ -157,7 +156,7 @@ export class RapierSample2Component implements AfterViewInit {
     // Rapier 생성
     const body: Body = new Body(this.rapier);
     await body.create({
-      body: {type:'dynamic', translation: new THREE.Vector3(0, 5, 0), cansleep: false},
+      body: {type:'dynamic', translation: new THREE.Vector3(0, 5, 0), canSleep: false},
       collider: {shape: 'cylinder', mass:1, restitution: 0.5},
       object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
     });
@@ -176,7 +175,7 @@ export class RapierSample2Component implements AfterViewInit {
     // Rapier 생성
     const body: Body = new Body(this.rapier);
     await body.create({
-      body: {type:'dynamic', translation:new THREE.Vector3(2.5, 5, 0), cansleep: false},
+      body: {type:'dynamic', translation:new THREE.Vector3(2.5, 5, 0), canSleep: false},
       collider: {shape: 'convexHull', mass:1, restitution: 0.5},
       object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
     });
@@ -277,18 +276,17 @@ class Car {
       const position = new THREE.Vector3(this.translation[0], this.translation[1], this.translation[2]);
       const carBody: Body = new Body(this.game.rapier);
       carBody.create({ // convexHull trimmesh
-        body : {type:'dynamic', translation: position.clone(), cansleep: false},
+        body : {type:'dynamic', translation: position.clone(), canSleep: false},
         collider: { shape: 'convexHull', restitution: 0.5},
         object3d: carMesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
       });
 
       const wheelBLBody: Body = new Body(this.game.rapier);
       wheelBLBody.create({ // shape: 'cylinder',
-        body : {type:'dynamic', translation: position.clone().add(new THREE.Vector3(-1, 1, 1)), cansleep: false},
+        body : {type:'dynamic', translation: position.clone().add(new THREE.Vector3(-1, 1, 1)), canSleep: false},
         collider: {shape: 'cylinder', args: [0.1, 0.3], restitution: 0.5,
           //  translation: position.clone().add(new THREE.Vector3(-1, 1, 1)),
           translation: new THREE.Vector3(-0.2, 0, 0),
-          cansleep: false, 
           rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2)
         },
         object3d: wheelBLMesh
@@ -296,10 +294,9 @@ class Car {
 
       const wheelBRBody: Body = new Body(this.game.rapier);
       wheelBRBody.create({ // shape: 'cylinder',
-        body : {type:'dynamic', translation: position.clone().add(new THREE.Vector3(1, 1, 1)), cansleep: false},
+        body : {type:'dynamic', translation: position.clone().add(new THREE.Vector3(1, 1, 1)), canSleep: false},
         collider: {shape: 'cylinder', args: [0.1, 0.3], restitution: 0.5,
           translation: new THREE.Vector3(0.2, 0, 0),
-          cansleep: false,
           rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2)
         },
         object3d: wheelBRMesh
@@ -307,10 +304,9 @@ class Car {
 
       const wheelFLBody: Body = new Body(this.game.rapier);
       wheelFLBody.create({ // shape: 'cylinder',
-        body : {type:'dynamic', translation: position.clone().add(new THREE.Vector3(-1, 1, -1)), cansleep: false},
+        body : {type:'dynamic', translation: position.clone().add(new THREE.Vector3(-1, 1, -1)), canSleep: false},
         collider: {shape: 'cylinder', args: [0.1, 0.3], restitution: 0.5,
           translation: new THREE.Vector3(-0.2, 0, 0),
-          cansleep: false,
           rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2)
         },
         object3d: wheelFLMesh
@@ -318,11 +314,10 @@ class Car {
 
       const wheelFRBody: Body = new Body(this.game.rapier);
       wheelFRBody.create({
-        body: {type:'dynamic', translation: position.clone().add(new THREE.Vector3(1, 1, -1)), cansleep: false},
+        body: {type:'dynamic', translation: position.clone().add(new THREE.Vector3(1, 1, -1)), canSleep: false},
         collider: {shape: 'cylinder', args: [0.1, 0.3], restitution: 0.5,
           translation: new THREE.Vector3(0.2, 0, 0),
           rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2),
-          cansleep: false
         },
         
         object3d: wheelFRMesh
