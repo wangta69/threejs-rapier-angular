@@ -5,8 +5,6 @@
 /tmp
 /out-tsc
 /bazel-out
-/projects
-/projects/ng-rapier-threejs
 
 # Node
 /node_modules
@@ -42,8 +40,7 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+
+
 projects/ng-rapier-threejs
-projects/ng-rapier-threejs
-/projects
-/projects
-/projects
