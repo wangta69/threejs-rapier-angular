@@ -3,6 +3,7 @@
 # Compiled output
 /dist
 /tmp
+/projects
 /out-tsc
 /bazel-out
 
