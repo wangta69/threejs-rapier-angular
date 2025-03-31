@@ -40,14 +40,15 @@ export class RapierSample2Component implements AfterViewInit {
       .setScreen()
       .setCamera({fov:95, near: 0.1, far: 100, position: [0, 2, 5]})
       .setRenderer({antialias: true})
-      .setLights({
+      .setLights([
+        {
         type: 'spot',
         intensity: Math.PI * 10,
         angle: Math.PI / 1.8,
         penumbra: 0.5,
         castShadow: true,
         shadow: {blurSamples: 10, radius: 5}
-      }).setLights({
+      },{
         type: 'spot',
         intensity: Math.PI * 10,
         position: [-2.5, 5, 5],
@@ -55,7 +56,7 @@ export class RapierSample2Component implements AfterViewInit {
         penumbra: 0.5,
         castShadow: true,
         shadow: {blurSamples: 10, radius: 5}
-      })
+      }])
       .enableControls({damping: true, target:{x: 0, y: 1, z: 0}})
       .enableHelpers({position: {x: 0, y: -75, z: 0}})
       .update(); // requestAnimationFrame(this.update)
