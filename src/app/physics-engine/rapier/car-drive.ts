@@ -7,7 +7,19 @@ import Stats from 'three/addons/libs/stats.module.js'
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js'
 import RAPIER from '@dimforge/rapier3d-compat'
 // import {Rapier, World, Mesh, Body} from 'ng-rapier-threejs';
-import {Rapier, World, Mesh, Body, Light, LensFlare, EventListener} from '../../../../projects/ng-rapier-threejs/src/public-api';
+import {Rapier, World, Mesh, Body, Light, LensFlare, LoaderRGBE, EventListener} from '../../../../projects/ng-rapier-threejs/src/public-api';
+
+
+// collision groups
+// floorShape = 0
+// carShape = 1
+// wheelShape = 2
+// axelShape = 3
+// the collision group calculations are,
+// The floor collides with the wheels and car. membership=0, filter=[1,2] = 65542
+// The car collides with the floor only. membership=1, filter=[0] = 131073
+// The wheels collide with the floor only. membership=2, filter=[0] = 262145
+// The axels collide with nothing. membership=3 = 589823
 
 @Component({
 selector: 'app-root',
@@ -23,6 +35,10 @@ export class CarDriveComponent implements AfterViewInit {
   public rapier!:Rapier;
   private stats!:Stats;
 
+  public pivot = new THREE.Object3D()
+  private yaw = new THREE.Object3D()
+  private pitch = new THREE.Object3D()
+
   constructor(world: World, rapier: Rapier, evListener: EventListener) {
     this.world = world;
     this.rapier = rapier;
@@ -37,8 +53,6 @@ export class CarDriveComponent implements AfterViewInit {
         this.init();
       }
     }, 10)
-
-    
   }
 
   private async init() {
@@ -47,27 +61,14 @@ export class CarDriveComponent implements AfterViewInit {
       .setScreen()
       .setCamera({fov:75, near: 0.1, far: 100, position: [0, 0, 4]})
       .setRenderer({antialias: true, test: false}, {toneMapping: 'ACESFilmic', shadowMap: {enable: true}})
-      .setLights([
-        {
-        type: 'spot',
-        intensity: Math.PI * 10,
-        angle: Math.PI / 1.8,
-        penumbra: 0.5,
-        castShadow: true,
-        shadow: {blurSamples: 10, radius: 5}
-      },{
-        type: 'spot',
-        intensity: Math.PI * 10,
-        position: [-2.5, 5, 5],
-        angle: Math.PI / 1.8,
-        penumbra: 0.5,
-        castShadow: true,
-        shadow: {blurSamples: 10, radius: 5}
-      }])
-      .enableControls({damping: true, target:{x: 0, y: 1, z: 0}})
-      .setGridHelper({position: {x: 0, y: -75, z: 0}})
+      // .enableControls({damping: true, target:{x: 0, y: 1, z: 0}})
+      .setGridHelper({args: [200, 100, 0x222222, 0x222222], position: {x: 0, y: -0.5, z: 0}})
       .update(); // requestAnimationFrame(this.update)
-
+      
+      const texture = await new LoaderRGBE().loader('assets/images/venice_sunset_1k.hdr', {mapping: 'EquirectangularReflectionMapping'})
+      this.world.scene.environment = texture;
+      this.world.scene.environmentIntensity = 0.1;
+      
       await this.rapier.initRapier(0.0, -9.81, 0.0);
       this.rapier.enableRapierDebugRenderer();
 
@@ -79,21 +80,28 @@ export class CarDriveComponent implements AfterViewInit {
 
       this.createFloorMesh();
 
-      // this.createCubeMesh();
-      // this.createSphereMesh();
-      // this.createCylinderMesh();
-      // this.createIcosahedronMesh(); 
-      // this.createTorusKnotMesh();
-      // this.createOBJLoader();
-      const pivot = new THREE.Object3D()
-      const yaw = new THREE.Object3D()
-      const pitch = new THREE.Object3D()
+      
 
-      this.world.scene.add(pivot)
-      pivot.add(yaw)
-      yaw.add(pitch)
+      this.world.scene.add(this.pivot)
 
-      new Car(this, [0, 0, 0], pivot)
+
+      this.pivot.add(this.yaw)
+      this.yaw.add(this.pitch)
+      this.pitch.add(this.world.camera) // adding the perspective camera to the hierarchy
+
+      new Car(this, [0, 0, 0]);
+
+
+      const boxes: Box[] = []
+      for (let x = 0; x < 8; x += 1) {
+        for (let y = 0; y < 8; y += 1) {
+          boxes.push(new Box(this, [(x - 4) * 1.2, y + 1, -20]))
+        }
+      }
+      
+      this.evListener.addMouseMoveEvent({renderer: this.onDocumentMouseMove.bind(this)});
+      this.evListener.addMouseWeelEvent({renderer: this.onDocumentMouseWheel.bind(this)});
+
       this.stats = new Stats()
       document.body.appendChild(this.stats.dom)
       
@@ -106,133 +114,39 @@ export class CarDriveComponent implements AfterViewInit {
 
   }
 
+  private onDocumentMouseMove(e: MouseEvent) {
+    this.yaw.rotation.y -= e.movementX * 0.002;
+    const v = this.pitch.rotation.x - e.movementY * 0.002;
+     // limit range
+    if (v > -1 && v < 0.1) {
+      this.pitch.rotation.x = v
+    }
+  }
+
+  private onDocumentMouseWheel(e: WheelEvent) {
+    e.preventDefault()
+    const v = this.world.camera.position.z + e.deltaY * 0.005
+    // limit range
+    if (v >= 1 && v <= 10) {
+      this.world.camera.position.z = v
+    }
+  }
+
   private async createFloorMesh() {
-  
-    const mesh = await new Mesh().create({
+    const mesh = await this.world.addMesh({
       geometry: {type: 'box', args: [50, 1, 50]}, // geometry 속성
       material: {type: 'phong'}, // material 속성
       mesh: {receiveShadow: true}
     });
 
-    this.world.scene.add(mesh);
-
     // Rapier 생성
     const body: Body = new Body(this.rapier);
     await body.create({
       body: {type: 'fixed', translation: new THREE.Vector3(0, -1, 0)},
-      collider: {shape: 'cuboid', args:[25, 0.5, 25]},
+      collider: {shape: 'cuboid', args:[25, 0.5, 25], collisionGroups: [0, [1, 2]]},
       object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
     });
   }
-
-  // private async createCubeMesh() {
-  
-  //   const mesh = await new Mesh().create({
-  //     geometry: {type: 'box', args: [1, 1, 1]}, // geometry 속성
-  //     material: {type: 'normal'}, // material 속성
-  //     mesh: { castShadow: true}
-  //   });
-  //   this.world.scene.add(mesh);
-
-  //   // Rapier 생성
-  //   const body: Body = new Body(this.rapier);
-  //   await body.create({
-  //     body: {type:'dynamic', translation:new THREE.Vector3(0, 5, 0), canSleep: false},
-  //     collider: {mass:1, restitution: 0.5},
-  //     object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
-  //   });
-  // }
-
-  // private async createSphereMesh() {
-  
-  //   const mesh = await new Mesh().create({
-  //     geometry: {type: 'sphere'}, // geometry 속성
-  //     material: {type: 'normal'}, // material 속성
-  //     mesh: {receiveShadow: true}
-  //   });
-
-  //   this.world.scene.add(mesh);
-
-  //   // Rapier 생성
-  //   const body: Body = new Body(this.rapier);
-  //   await body.create({
-  //     body: {type:'dynamic', translation: new THREE.Vector3(-2.5, 5, 0), canSleep: false},
-  //     collider: {shape: 'ball', restitution: 0.5},
-  //     object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
-  //   });
-  // }
-
-  // private async createCylinderMesh() {
-  //   const mesh = await new Mesh().create({
-  //     geometry: {type: 'cylinder', args: [1, 1, 2, 16]}, // geometry 속성
-  //     material: {type: 'normal'}, // material 속성
-  //     mesh: {castShadow: true}
-  //   });
-
-  //   this.world.scene.add(mesh);
-
-  //   // Rapier 생성
-  //   const body: Body = new Body(this.rapier);
-  //   await body.create({
-  //     body: {type:'dynamic', translation: new THREE.Vector3(0, 5, 0), canSleep: false},
-  //     collider: {shape: 'cylinder', mass:1, restitution: 0.5},
-  //     object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
-  //   });
-  // }
-
-  // private async createIcosahedronMesh() {
-      
-  //   const mesh = await new Mesh().create({
-  //     geometry: {type: 'icosahedron', args: [1, 0]}, // geometry 속성
-  //     material: {type: 'normal'}, // material 속성
-  //     mesh: {receiveShadow: true}
-  //   });
-
-  //   this.world.scene.add(mesh);
-
-  //   // Rapier 생성
-  //   const body: Body = new Body(this.rapier);
-  //   await body.create({
-  //     body: {type:'dynamic', translation:new THREE.Vector3(2.5, 5, 0), canSleep: false},
-  //     collider: {shape: 'convexHull', mass:1, restitution: 0.5},
-  //     object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
-  //   });
-  // }
-
-  // private async createTorusKnotMesh() {
-        
-  //   const mesh = await new Mesh().create({
-  //     geometry: {type: 'torusknot'}, // geometry 속성
-  //     material: {type: 'normal'}, // material 속성
-  //     mesh: {receiveShadow: true}
-  //   });
-
-  //   this.world.scene.add(mesh);
-
-  //   // Rapier 생성
-  //   const body: Body = new Body(this.rapier);
-  //   await body.create({
-  //     body: {type:'dynamic', translation:new THREE.Vector3(5, 5, 0)},
-  //     collider: {shape: 'trimesh', mass:1, restitution: 0.5},
-  //     object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
-  //   });
-  // }
-
-  // private async createOBJLoader() {
-  //   const mesh = await new Mesh().loadObj({
-  //     material: {type: 'normal'}, // material 속성
-  //     mesh: {castShadow: true, url: '/assets/suzanne.obj', name: 'Suzanne'}
-  //   });
-
-  //   this.world.scene.add(mesh);
-
-  //   const body: Body = new Body(this.rapier);
-  //   await body.create({
-  //     body: {type:'dynamic', translation:new THREE.Vector3(-1, 10, 0)},
-  //     collider: {shape: 'trimesh', mass:1, restitution: 0.5},
-  //     object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
-  //   });
-  // }
 
   private addRendererOption() {
       // this.renderer = new THREE.WebGLRenderer({antialias: true}); // renderer with transparent backdrop
@@ -265,11 +179,10 @@ class Car {
   private translation:number[];
 
 
-  private dynamicBodies: [THREE.Object3D, RAPIER.RigidBody][] = []
   private followTarget = new THREE.Object3D()
   private lightLeftTarget = new THREE.Object3D()
   private lightRightTarget = new THREE.Object3D()
-  private carBody?: RAPIER.RigidBody
+  // private carBody?: RAPIER.RigidBody
 
 
   private wheelBLMotor!: RAPIER.ImpulseJoint
@@ -278,10 +191,10 @@ class Car {
   private wheelFRAxel!: RAPIER.ImpulseJoint
 
   private v = new THREE.Vector3()
-  private keyMap!: { [key: string]: boolean }
-  private pivot!: THREE.Object3D
+  // private keyMap!: { [key: string]: boolean }
+  // private pivot!: THREE.Object3D
 
-  constructor(game: any, translation:number[] = [0, 0, 0], pivot: THREE.Object3D) {
+  constructor(game: any, translation:number[] = [0, 0, 0]) {
     this.game = game;
     this.translation = translation;
     
@@ -289,7 +202,7 @@ class Car {
     this.followTarget.position.set(0, 1, 0);
     this.lightLeftTarget.position.set(-0.35, 1, -10);
     this.lightRightTarget.position.set(0.35, 1, -10);
-    this.pivot = pivot;
+    // this.pivot = pivot;
 
     this.create();
   }
@@ -308,9 +221,6 @@ class Car {
       })
 
       carMesh.add(this.followTarget);
-
-
-
       const textureLoader = new THREE.TextureLoader()
       const textureFlare0 = textureLoader.load('/assets/images/lensflare0.png')
       const textureFlare3 = textureLoader.load('/assets/images/lensflare3.png')
@@ -323,22 +233,40 @@ class Car {
       .addElement({texture: textureFlare3, size:62.5, distance:0.4})
       .get();
 
-      const lensflareRight =  lensflareLeft.clone();
+      // const lensflareRight =  lensflareLeft.clone();
+
+      const lensflareRight = new LensFlare()
+      .addElement({texture: textureFlare0, size:1000, distance:0})
+      .addElement({texture: textureFlare3, size:500, distance:0.2})
+      .addElement({texture: textureFlare3, size:250, distance:0.8})
+      .addElement({texture: textureFlare3, size:125, distance:0.6})
+      .addElement({texture: textureFlare3, size:62.5, distance:0.4})
+      .get();
 
       const headLightLeft = new Light({
         type: 'spot',
         position: [-0.4, 0.5, -1.01],
         angle: Math.PI / 4,
         penumbra: 0.5,
+        intensity: 10,
         castShadow: true,
         shadow: {blurSamples: 10, radius: 5}
       }).get();
 
-      
+      // const headLightRight = headLightLeft.clone()
+      // headLightRight.position.set(0.4, 0.5, -1.01)
 
-      const headLightRight = headLightLeft.clone()
-      headLightRight.position.set(0.4, 0.5, -1.01)
+      const headLightRight = new Light({
+        type: 'spot',
+        position: [0.4, 0.5, -1.01],
+        angle: Math.PI / 4,
+        penumbra: 0.5,
+        intensity: 10,
+        castShadow: true,
+        shadow: {blurSamples: 10, radius: 5}
+      }).get();
 
+      // 이것이 제대로 작동안함
       carMesh.add(headLightLeft);
       (headLightLeft as THREE.SpotLight).target = this.lightLeftTarget
       headLightLeft.add(lensflareLeft)
@@ -349,8 +277,6 @@ class Car {
       headLightRight.add(lensflareRight)
       carMesh.add(this.lightRightTarget)
 
-
-  
       const wheelBLMesh: any = gltf.getObjectByName('wheel_backLeft')
       const wheelBRMesh: any = gltf.getObjectByName('wheel_backRight')
       const wheelFLMesh: any = gltf.getObjectByName('wheel_frontLeft')
@@ -362,7 +288,7 @@ class Car {
       const carBody: Body = new Body(this.game.rapier);
       carBody.create({ // convexHull trimmesh
         body : {type:'dynamic', translation: position.clone(), canSleep: false},
-        collider: { shape: 'convexHull', restitution: 0.1},
+        collider: { shape: 'convexHull', restitution: 0.1, collisionGroups: [1, [0]]},
         object3d: carMesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
       });
 
@@ -371,7 +297,8 @@ class Car {
         body : {type:'dynamic', translation: position.clone().add(new THREE.Vector3(-1, 1, 1)), canSleep: false},
         collider: {shape: 'cylinder', args: [0.1, 0.3], restitution: 0.05, friction: 2,
           translation: new THREE.Vector3(-0.2, 0, 0),
-          rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2)
+          rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2),
+          collisionGroups: [2, [0]]
         },
         object3d: wheelBLMesh
       });
@@ -381,7 +308,8 @@ class Car {
         body : {type:'dynamic', translation: position.clone().add(new THREE.Vector3(1, 1, 1)), canSleep: false},
         collider: {shape: 'cylinder', args: [0.1, 0.3], restitution: 0.05, friction: 2,
           translation: new THREE.Vector3(0.2, 0, 0),
-          rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2)
+          rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2),
+          collisionGroups: [2, [0]]
         },
         object3d: wheelBRMesh
       });
@@ -391,7 +319,8 @@ class Car {
         body : {type:'dynamic', translation: position.clone().add(new THREE.Vector3(-1, 1, -1)), canSleep: false},
         collider: {shape: 'cylinder', args: [0.1, 0.3], restitution: 0.05, friction: 2,
           translation: new THREE.Vector3(-0.2, 0, 0),
-          rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2)
+          rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2),
+          collisionGroups: [2, [0]]
         },
         object3d: wheelFLMesh
       });
@@ -402,6 +331,7 @@ class Car {
         collider: {shape: 'cylinder', args: [0.1, 0.3], restitution: 0.05, friction: 2,
           translation: new THREE.Vector3(0.2, 0, 0),
           rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2),
+          collisionGroups: [2, [0]]
         },
         
         object3d: wheelFRMesh
@@ -412,7 +342,9 @@ class Car {
       axelFLBody.create({
         body: {type:'dynamic', translation: position.clone().add(new THREE.Vector3(-0.55, 0, -0.63)), canSleep: false},
         collider: {
-          shape: 'cuboid', args: [0.1, 0.1, 0.1], mass: 1, rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2)
+          shape: 'cuboid', args: [0.1, 0.1, 0.1], mass: 1, 
+          rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2),
+          collisionGroups: [3]
         }
       });
 
@@ -420,16 +352,11 @@ class Car {
       axelFRBody.create({
         body: {type:'dynamic', translation: position.clone().add(new THREE.Vector3(0.55, 0, -0.63)), canSleep: false},
         collider: {
-          shape: 'cuboid', args: [0.1, 0.1, 0.1], mass: 1, rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2)
+          shape: 'cuboid', args: [0.1, 0.1, 0.1], mass: 1, 
+          rotation: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2),
+          collisionGroups: [3]
         }
       });
-
-      /*
-        RigidBodyDesc.dynamic()
-          .setTranslation(position[0] + 0.55, position[1], position[2] - 0.63)
-          .setCanSleep(false)
-      )
-*/
 
       this.wheelBLMotor = this.game.rapier.world.createImpulseJoint(
         RAPIER.JointData.revolute(new RAPIER.Vector3(-0.55, 0, 0.63), new RAPIER.Vector3(0, 0, 0), new RAPIER.Vector3(-1, 0, 0)),
@@ -444,38 +371,15 @@ class Car {
         wheelBRBody.rigidBody,
         true
       )
-/*
-      this.game.rapier.world.createImpulseJoint(
-        RAPIER.JointData.revolute(new  RAPIER.Vector3(-0.55, 0, 0.63), new  RAPIER.Vector3(0, 0, 0), new  RAPIER.Vector3(-1, 0, 0)),
-        carBody.rigidBody, 
-        wheelBLBody.rigidBody,
-        true)
-      this.game.rapier.world.createImpulseJoint(
-        RAPIER.JointData.revolute(new  RAPIER.Vector3(0.55, 0, 0.63), new  RAPIER.Vector3(0, 0, 0), new  RAPIER.Vector3(-1, 0, 0)),
-        carBody.rigidBody, 
-        wheelBRBody.rigidBody, 
-        true)
-        */
-        this.game.rapier.world.createImpulseJoint(
-        RAPIER.JointData.revolute(new  RAPIER.Vector3(-0.55, 0, -0.63), new  RAPIER.Vector3(0, 0, 0), new  RAPIER.Vector3(-1, 0, 0)),
-        carBody.rigidBody, 
-        wheelFLBody.rigidBody,
-        true)
-        this.game.rapier.world.createImpulseJoint(
-        RAPIER.JointData.revolute(new  RAPIER.Vector3(0.55, 0, -0.63), new  RAPIER.Vector3(0, 0, 0), new  RAPIER.Vector3(-1, 0, 0)),
-        carBody.rigidBody, 
-        wheelFRBody.rigidBody,
-        true)
-
     
-
+      // attach steering axels to car. These will be configurable motors.
       this.wheelFLAxel = this.game.rapier.world.createImpulseJoint(
         RAPIER.JointData.revolute(new RAPIER.Vector3(-0.55, 0, -0.63), new RAPIER.Vector3(0, 0, 0), new RAPIER.Vector3(0, 1, 0)),
         carBody.rigidBody,
         axelFLBody.rigidBody,
         true
       );
-      // // (this.wheelFLAxel as RAPIER.PrismaticImpulseJoint).configureMotorModel(RAPIER.MotorModel.ForceBased)
+      (this.wheelFLAxel as RAPIER.PrismaticImpulseJoint).configureMotorModel(RAPIER.MotorModel.ForceBased)
 
       this.wheelFRAxel = this.game.rapier.world.createImpulseJoint(
         RAPIER.JointData.revolute(new RAPIER.Vector3(0.55, 0, -0.63), new RAPIER.Vector3(0, 0, 0), new RAPIER.Vector3(0, 1, 0)),
@@ -483,70 +387,45 @@ class Car {
         axelFRBody.rigidBody,
         true
       );
-      /*
-      this.game.rapier.world.createImpulseJoint(
-        RAPIER.JointData.revolute(new RAPIER.Vector3(0, 0, 0), new RAPIER.Vector3(0, 0, 0), new RAPIER.Vector3(1, 0, 0)), 
-        axelFLBody.rigidBody, 
-        wheelFLBody.rigidBody, 
-        true)
-      this.game.rapier.world.createImpulseJoint(
-        RAPIER.JointData.revolute(new RAPIER.Vector3(0, 0, 0), new RAPIER.Vector3(0, 0, 0), new RAPIER.Vector3(1, 0, 0)), 
-        axelFRBody.rigidBody,
-        wheelFRBody.rigidBody, 
-        true)
-        */
+      (this.wheelFRAxel as RAPIER.PrismaticImpulseJoint).configureMotorModel(RAPIER.MotorModel.ForceBased)
 
+      // attach front wheel to steering axels
+      this.game.rapier.world.createImpulseJoint(RAPIER.JointData.revolute(new RAPIER.Vector3(0, 0, 0), new RAPIER.Vector3(0, 0, 0), new RAPIER.Vector3(1, 0, 0)), axelFLBody.rigidBody, wheelFLBody.rigidBody, true)
+      this.game.rapier.world.createImpulseJoint(RAPIER.JointData.revolute(new RAPIER.Vector3(0, 0, 0), new RAPIER.Vector3(0, 0, 0), new RAPIER.Vector3(1, 0, 0)), axelFRBody.rigidBody, wheelFRBody.rigidBody, true)
     });
 
     this.game.world.updates.push((clock:any)=>{this.update(clock)});
   }
 
-  private update(clock: any) {
-    // this.followTarget.getWorldPosition(this.v)
-    // this.pivot.position.lerp(this.v, delta * 5) // frame rate independent
+  private update(clock: THREE.Clock) {
 
-    //this.pivot.position.copy(this.v)
+    this.followTarget.getWorldPosition(this.v)
+    // this.game.pivot.position.lerp(this.v, clock.getDelta() * 5) // frame rate independent
+    this.game.pivot.position.copy(this.v)
 
-    // console.log(this.game.evListener.keyMap);
     let targetVelocity = 0
-    if (this.game.evListener.keyMap['KeyW']) {
+    if (this.game.evListener.keyMap['KeyW'] || this.game.evListener.keyMap['ArrowUp']) {
       targetVelocity = 500
     }
-    if (this.game.evListener.keyMap['KeyS']) {
+    if (this.game.evListener.keyMap['KeyS'] || this.game.evListener.keyMap['ArrowDown']) {
       targetVelocity = -200
     }
 
-    // console.log('targetVelocity:', targetVelocity);
     (this.wheelBLMotor as RAPIER.PrismaticImpulseJoint).configureMotorVelocity(targetVelocity, 2.0);
     (this.wheelBRMotor as RAPIER.PrismaticImpulseJoint).configureMotorVelocity(targetVelocity, 2.0);
 
     let targetSteer = 0
-    if (this.game.evListener.keyMap['KeyA']) {
-      // targetSteer += 0.6
-      targetSteer -= 6
+    if (this.game.evListener.keyMap['KeyA'] || this.game.evListener.keyMap['ArrowLeft']) {
+      targetSteer += 0.6
     }
-    if (this.game.evListener.keyMap['KeyD']) {
-      // targetSteer -= 0.6
-      targetSteer -= 6
+    if (this.game.evListener.keyMap['KeyD'] || this.game.evListener.keyMap['ArrowRight']) {
+      targetSteer -= 0.6
     }
-
-    console.log('targetSteer:', targetSteer);
-    // (this.wheelFLAxel as RAPIER.PrismaticImpulseJoint).configureMotorPosition(targetSteer, 100, 10);
-    // // (this.wheelFLAxel as RAPIER.PrismaticImpulseJoint).configureMotorModel(RAPIER.MotorModel.ForceBased);
-    // (this.wheelFRAxel as RAPIER.PrismaticImpulseJoint).configureMotorPosition(targetSteer, 100, 10);
-    // (this.wheelFRAxel as RAPIER.PrismaticImpulseJoint).configureMotorModel(RAPIER.MotorModel.ForceBased);
-
-      //   // attach steering axels to car. These will be configurable motors.
-      //   this.wheelFLAxel = world.createImpulseJoint(JointData.revolute(new Vector3(-0.55, 0, -0.63), new Vector3(0, 0, 0), new Vector3(0, 1, 0)), this.carBody, axelFLBody, true)
-      //   ;(this.wheelFLAxel as PrismaticImpulseJoint).configureMotorModel(MotorModel.ForceBased)
-      //   this.wheelFRAxel = world.createImpulseJoint(JointData.revolute(new Vector3(0.55, 0, -0.63), new Vector3(0, 0, 0), new Vector3(0, 1, 0)), this.carBody, axelFRBody, true)
-      //   ;(this.wheelFRAxel as PrismaticImpulseJoint).configureMotorModel(MotorModel.ForceBased)
-
-      //   // // at
+    (this.wheelFLAxel as RAPIER.PrismaticImpulseJoint).configureMotorPosition(targetSteer, 100, 10);
+    (this.wheelFRAxel as RAPIER.PrismaticImpulseJoint).configureMotorPosition(targetSteer, 100, 10);
 
   }
 }
-
 
 class Box {
   private game: CarDriveComponent;
@@ -558,23 +437,18 @@ class Box {
   }
 
   private async create() {
-    const mesh = await new Mesh().create({
-      geometry: {type: 'box', args: [1, 1, 1]}, // geometry 속성
+    const box = await this.game.world.addMesh({
+      geometry: {type: 'box'}, // geometry 속성
       material: {type: 'standard'}, // material 속성
       mesh: { castShadow: true}
     });
-    this.game.world.scene.add(mesh);
-
-    // const boxMesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
-    // boxMesh.castShadow = true
-    // scene.add(boxMesh)
 
     // Rapier 생성
     const body: Body = new Body(this.game.rapier);
     await body.create({
       body: {type:'dynamic', translation:this.translation, canSleep: false},
-      collider: {mass:1, restitution: 0.5},
-      object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
+      collider: {mass:0.1, restitution: 0.5},
+      object3d: box // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
     });
   }
 }
