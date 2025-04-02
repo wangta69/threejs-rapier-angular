@@ -58,7 +58,7 @@ export class RapierSample2Component implements AfterViewInit {
         shadow: {blurSamples: 10, radius: 5}
       }])
       .enableControls({damping: true, target:{x: 0, y: 1, z: 0}})
-      .enableHelpers({args: [200, 100, 0x222222, 0x222222], position: {x: 0, y: -0.5, z: 0}})
+      .setGridHelper({args: [200, 100, 0x222222, 0x222222], position: {x: 0, y: -0.5, z: 0}})
       .update(); // requestAnimationFrame(this.update)
 
       await this.rapier.initRapier(0.0, -9.81, 0.0);
