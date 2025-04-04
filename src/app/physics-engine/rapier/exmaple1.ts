@@ -148,7 +148,6 @@ export class RapierSample1Component implements AfterViewInit { // , AfterViewIni
       )
       if (intersects.length) {
         this.rapier.dynamicBodies.forEach((b) => {
-          console.log('b:', b);
           b.object3d === intersects[0].object && b.rigidBody.applyImpulse(new RAPIER.Vector3(0, 10, 0), true)
         })
       }

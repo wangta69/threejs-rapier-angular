@@ -127,8 +127,7 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
     // const sphereBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(-2.5, 5, 0);
     // const sphereBody = this.world.createRigidBody(sphereBodyDesc)
     // const sphereShape = RAPIER.ColliderDesc.ball(1).setRestitution(0.5);
-    // console.log('sphereBodyDesc:', sphereBodyDesc);
-    // console.log('sphereShape:', sphereShape);
+
     // this.world.createCollider(sphereShape, sphereBody)
     // this.dynamicBodies.push([sphereMesh, sphereBody])
 
@@ -193,12 +192,9 @@ export class RapierSample2Component implements OnInit, OnDestroy, AfterViewInit 
     const floorShape = RAPIER.ColliderDesc.cuboid(25, 0.5, 25)
     this.world.createCollider(floorShape, floorBody)
 
-    console.log('rigidBodyDesc: ', floorBodyRigidBodyDesc);
-    console.log('ColliderDesc: ', floorShape);
-
     // creating a shape from a loaded geometry. (Using OBJLoader)
     // new OBJLoader().loadAsync('/assets/suzanne.obj').then((object) => {
-    //     //console.log(object)
+
     //     this.scene.add(object)
     //     const suzanneMesh: any = object.getObjectByName('Suzanne')                
     //     suzanneMesh.material = new THREE.MeshNormalMaterial()
@@ -340,9 +336,6 @@ class RapierDebugRenderer {
   update() {
       if (this.enabled) {
           const { vertices, colors } = this.world.debugRender()
-          // console.log('vertices:', vertices);
-          // console.log('colors:', colors);
-          // console.log('this.mesh:', this.mesh);
           this.mesh.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
           this.mesh.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4))
           this.mesh.visible = true
@@ -359,8 +352,6 @@ class Car {
   constructor(game: RapierSample2Component, position:number[] = [0, 0, 0]) {
     this.game = game;
       new GLTFLoader().loadAsync('/assets/sedanSports.glb').then((gltf) => {
-          //console.log(gltf.scene)
-
           const carMesh:any = gltf.scene.getObjectByName('body');
           carMesh.position.set(0, 0, 0)
           carMesh.traverse((o: any) => {
@@ -406,7 +397,6 @@ class Car {
           const wheelFRBodyRigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
           .setTranslation(1 + position[0], 1 + position[1], -1 + position[2])
           .setCanSleep(false);
-          console.log('wheelFRBodyRigidBodyDesc:', wheelFRBodyRigidBodyDesc);
           const wheelFRBody = this.game.world.createRigidBody(
               wheelFRBodyRigidBodyDesc
           )
@@ -445,8 +435,6 @@ class Car {
               .setRotation(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2))
               .setTranslation(0.2, 0, 0)
               .setRestitution(0.5)
-
-              console.log('wheelFRShape:', wheelFRShape);
           // create world collider
           this.game.world.createCollider(carShape, carBody)
           this.game.world.createCollider(wheelBLShape, wheelBLBody)
