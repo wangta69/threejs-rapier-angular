@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import RAPIER from '@dimforge/rapier3d-compat';
-// import {Rapier, World, Mesh, Body} from '../../../projects/ng-rapier-threejs/src/public-api';
-import {Rapier, World, Mesh, Body} from 'ng-rapier-threejs';
+// import {Rapier, World, Mesh, Body, EventListener} from '../../../../projects/ng-rapier-threejs/src/public-api';
+import {Rapier, World, Mesh, Body, EventListener} from 'ng-rapier-threejs';
 @Component({
 selector: 'app-root',
 templateUrl: './scene.html',
@@ -18,13 +18,14 @@ export class RapierSample1Component implements AfterViewInit { // , AfterViewIni
   private raycaster = new THREE.Raycaster()
   private mouse = new THREE.Vector2()
   private world!:World;
+  public evListener: EventListener;
   private rapier!:Rapier;
   private stats!:Stats;
   private cubeMesh!:THREE.Mesh;
 
-  constructor(world: World, rapier: Rapier) {
+  constructor(world: World, evListener: EventListener) {
     this.world = world;
-    this.rapier = rapier;
+    this.evListener = evListener;
   }
 
   ngAfterViewInit() {
@@ -61,12 +62,18 @@ export class RapierSample1Component implements AfterViewInit { // , AfterViewIni
         castShadow: true,
         shadow: {blurSamples: 10, radius: 5}
       }])
+      .enableRapier(async (rapier: Rapier) => {
+        this.rapier = rapier;
+        rapier.init([0.0, -9.81,  0.0]);
+        // await rapier.initRapier(0.0, -9.81, 0.0);
+        rapier.enableRapierDebugRenderer();
+      })
       .enableControls({damping: true, target:{x: 0, y: 1, z: 0}})
       .setGridHelper({position: {x: 0, y: -75, z: 0}})
       .update(); // requestAnimationFrame(this.update)
 
-    await this.rapier.initRapier(0.0, -9.81, 0.0);
-    this.rapier.enableRapierDebugRenderer();
+    this.evListener.activeWindowResize();
+    this.evListener.addWindowResize(this.world.onResize.bind(this.world));
 
     this.addRendererOption();
 
@@ -85,23 +92,14 @@ export class RapierSample1Component implements AfterViewInit { // , AfterViewIni
   }
 
   private async createCubeMesh() {
-
-    const mesh = new Mesh();
-    this.cubeMesh = await mesh.create({
+    await this.world.addObject({
       geometry: {type: 'box', args:[1, 1, 1]}, // geometry 속성
       material: {type: 'normal'}, // material 속성
-      mesh: { //  mesh 속성
-        castShadow: true,
+      mesh: { castShadow: true},
+      rapier: {
+        body: {type: 'dynamic', translation:new THREE.Vector3(0, 5, 0), canSleep: false, userData: {name: 'box'}},
+        collider: {mass:1, restitution: 0.1},
       }
-    });
-    this.world.scene.add(this.cubeMesh);
-
-    // Rapier 생성
-    const body: Body = new Body(this.rapier);
-    await body.create({
-      body: {type: 'dynamic', translation:new THREE.Vector3(0, 5, 0), canSleep: false, userData: {name: 'box'}},
-      collider: {mass:1, restitution: 0.1},
-      object3d: this.cubeMesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
     });
   }
 

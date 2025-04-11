@@ -6,8 +6,8 @@ import * as THREE from 'three';
 import Stats from 'three/addons/libs/stats.module.js'
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js'
 import RAPIER from '@dimforge/rapier3d-compat'
-// import {Rapier, World, Mesh, Body} from 'ng-rapier-threejs';
-import {Rapier, World, Mesh, Body, Light, LensFlare, LoaderRGBE, EventListener} from '../../../../projects/ng-rapier-threejs/src/public-api';
+import {Rapier, World, Mesh, Body, Light, LensFlare, LoaderRGBE, EventListener} from 'ng-rapier-threejs';
+// import {Rapier, World, Mesh, Body, Light, LensFlare, LoaderRGBE, EventListener} from '../../../../projects/ng-rapier-threejs/src/public-api';
 
 
 // collision groups
@@ -63,17 +63,22 @@ export class CarDriveComponent implements AfterViewInit {
       .setRenderer({antialias: true, test: false}, {toneMapping: 'ACESFilmic', shadowMap: {enable: true}})
       // .enableControls({damping: true, target:{x: 0, y: 1, z: 0}})
       .setGridHelper({args: [200, 100, 0x222222, 0x222222], position: {x: 0, y: -0.5, z: 0}})
+      .enableRapier(async (rapier: Rapier) => {
+        this.rapier = rapier;
+        rapier.init([0.0, -9.81,  0.0]);
+        // await rapier.initRapier(0.0, -9.81, 0.0);
+        rapier.enableRapierDebugRenderer();
+      })
       .update(); // requestAnimationFrame(this.update)
       
       const texture = await new LoaderRGBE().loader('assets/images/venice_sunset_1k.hdr', {mapping: 'EquirectangularReflectionMapping'})
       this.world.scene.environment = texture;
       this.world.scene.environmentIntensity = 0.1;
       
-      await this.rapier.initRapier(0.0, -9.81, 0.0);
-      this.rapier.enableRapierDebugRenderer();
-
       this.addRendererOption();
 
+      this.evListener.activeWindowResize();
+      this.evListener.addWindowResize(this.world.onResize.bind(this.world))
 
       this.evListener.activeClickEvent(this.world.renderer);
       this.evListener.activePointerlockchange(this.world.renderer);
@@ -133,18 +138,15 @@ export class CarDriveComponent implements AfterViewInit {
   }
 
   private async createFloorMesh() {
-    const mesh = await this.world.addMesh({
+
+    await this.world.addObject({
       geometry: {type: 'box', args: [50, 1, 50]}, // geometry 속성
       material: {type: 'phong'}, // material 속성
-      mesh: {receiveShadow: true}
-    });
-
-    // Rapier 생성
-    const body: Body = new Body(this.rapier);
-    await body.create({
-      body: {type: 'fixed', translation: new THREE.Vector3(0, -1, 0)},
-      collider: {shape: 'cuboid', args:[25, 0.5, 25], collisionGroups: [0, [1, 2]]},
-      object3d: mesh // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
+      mesh: {receiveShadow: true},
+      rapier: {
+        body: {type: 'fixed', translation: new THREE.Vector3(0, -1, 0)},
+        collider: {shape: 'cuboid', collisionGroups: [0, [1, 2]]}, // args:[25, 0.5, 25], 
+      }
     });
   }
 
@@ -437,6 +439,17 @@ class Box {
   }
 
   private async create() {
+
+    await this.game.world.addObject({
+      geometry: {type: 'box'}, // geometry 속성
+      material: {type: 'standard'}, // material 속성
+      mesh: {castShadow: true},
+      rapier: {
+        body: {type:'dynamic', translation:this.translation, canSleep: false},
+        collider: {mass:0.1, restitution: 0.5},
+      }
+    });
+/*
     const box = await this.game.world.addMesh({
       geometry: {type: 'box'}, // geometry 속성
       material: {type: 'standard'}, // material 속성
@@ -450,5 +463,6 @@ class Box {
       collider: {mass:0.1, restitution: 0.5},
       object3d: box // 위에서 생성한 ThreeJs의 mesh를 넣어주면 mesh의 속성(shape, postion, scale등등을 자동으로 처리합니다 )
     });
+    */
   }
 }
