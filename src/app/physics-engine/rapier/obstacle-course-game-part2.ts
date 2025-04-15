@@ -1,15 +1,16 @@
 
 import { Component, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import * as THREE from 'three';
-// https://sbedit.net/efeae5eb0f8224231f28c0a74916a24ced87b788
+//https://sbedit.net/afbc21b9d6defe5c5bd2fcda6d6e2f1af0cebb26
 
-import Stats from 'three/addons/libs/stats.module.js'
+// import Stats from 'three/addons/libs/stats.module.js'
 
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import RAPIER from '@dimforge/rapier3d-compat'
-import {Rapier, World, Body, Light, LensFlare, LoaderRGBE, EventListener, ClockProps} from '../../../../projects/ng-rapier-threejs/src/public-api';
+import {Rapier, World, Body, Light, LensFlare, Mesh, LoaderRGBE, EventListener, ClockProps} from '../../../../projects/ng-rapier-threejs/src/public-api';
 import {_vector3, _euler, _quaternion, _object3d, _matrix4} from '../../../../projects/ng-rapier-threejs/src/public-api';
+// import { LoaderGLTF } from 'ng-rapier-threejs';
 type TanimationAction = {
   idle: THREE.AnimationAction,
   jump: THREE.AnimationAction,
@@ -22,7 +23,7 @@ type TanimationAction = {
 selector: 'app-root',
 templateUrl: './scene.html',
 })
-export class ObstacleCourseGamePart1 implements AfterViewInit {
+export class ObstacleCourseGamePart2 implements AfterViewInit {
   @ViewChild('domContainer', {static: true}) domContainer!: ElementRef;
 
   public world!:World
@@ -31,7 +32,10 @@ export class ObstacleCourseGamePart1 implements AfterViewInit {
   public pivot = new THREE.Object3D();
   public light!: THREE.DirectionalLight;
 
+  private pendulums:Pendulum[] = [];
+  private spinners:Spinner[] = [];
   private player!:Player;
+  private finish!:Finish;
 
   constructor(world: World, evListener: EventListener) { //rapier: Rapier, 
     this.world = world;
@@ -57,7 +61,7 @@ export class ObstacleCourseGamePart1 implements AfterViewInit {
       .setCamera({fov:75, near: 0.1, far: 100, position: [0, 0, 4]})
       .setRenderer({antialias: true}, {toneMapping: 'ACESFilmic', shadowMap: {enabled: true}})
       // .enableControls({damping: true, target:{x: 0, y: 1, z: 0}})
-      .setGridHelper({args: [50, 50]})
+      // .setGridHelper({args: [50, 50]})
       .setLight(
         {
         type: 'directional',
@@ -95,8 +99,25 @@ export class ObstacleCourseGamePart1 implements AfterViewInit {
       this.evListener.activeWindowResize();
       this.evListener.addWindowResize(this.world.onResize.bind(this.world));
 
+      new Start(this, [0, -0.5, 0]);
 
-      this.floormesh();
+      new Platform(this, [1, 0.1, 2], [0, 0, 6])
+      new Platform(this, [2.5, 0.1, 1], [3, 0.25, 6])
+      new Platform(this, [2, 0.1, 1], [6, 1, 6])
+      new Platform(this, [0.25, 0.1, 4.5], [6, 2, 2.25])
+      new Platform(this, [4, 0.1, 5], [6, 2, -3])
+      this.spinners.push(new Spinner(this, [6, 2.8, -3]))
+      new Platform(this, [1, 0.1, 2], [6.25, 2.5, -7.5])
+      new Platform(this, [4, 0.1, 4], [2.5, 3, -8])
+      this.spinners.push(new Spinner(this, [2.5, 3.8, -8]))
+      new Platform(this, [1, 0.1, 2.75], [1.5, 3.75, -3.25], [-Math.PI / 8, 0, 0])
+      new Platform(this, [6, 0.1, 1], [-1, 4.5, -1])
+      this.pendulums.push(new Pendulum(this, [0, 8, -1]))
+      this.pendulums.push(new Pendulum(this, [-2, 8, -1]))
+      new Platform(this, [1.5, 0.1, 8], [-5.5, 4.5, 4.5], [0, 0, -Math.PI / 8])
+      this.pendulums.push(new Pendulum(this, [-5, 8, 2.5], Math.PI / 2))
+      this.pendulums.push(new Pendulum(this, [-5, 8, 5], Math.PI / 2))
+      this.finish = new Finish(this, [0, 4.0, 10])
 
       this.player = new Player(this)
       await this.player.init();
@@ -108,18 +129,6 @@ export class ObstacleCourseGamePart1 implements AfterViewInit {
 
       this.evListener.activeClickEvent(this.world.renderer);
       this.evListener.activePointerlockchange(this.world.renderer);
-  }
-
-  private async floormesh() {
-    await this.world.addObject({
-      geometry: {type: 'box', args: [50, 1, 50]}, // geometry 속성
-      material: {type: 'standard'}, // material 속성
-      mesh: {receiveShadow : true}, // , position:[0, -0.5, 0]
-      rapier: {
-        body: {type: 'fixed', translation: new THREE.Vector3(0, -1, 0)},
-        collier: {shape: 'cuboid', args:[25, 0.5, 25]},
-      }
-    });
   }
 }
 
@@ -168,12 +177,9 @@ class AnimationController {
           break
       }
     }
-
-    // this.speed = 0; // for test
   }
 
   update(delta: number) {
-
     if (!this.wait) {
       let actionAssigned = false
 
@@ -190,8 +196,6 @@ class AnimationController {
       ) {
         keyDetected = true;
       }
-
-
 
       if (
         !actionAssigned && keyDetected &&
@@ -218,10 +222,8 @@ class AnimationController {
 
     // update the Eve models animation mixer
     this.model.update(delta)
-   
   }
 }
-
 
 class Eve extends THREE.Group {
   private mixer!: THREE.AnimationMixer;
@@ -274,55 +276,52 @@ class FollowCam {
   private yaw = new THREE.Object3D()
   private pitch = new THREE.Object3D()
 
-  constructor(game: ObstacleCourseGamePart1) {
-      this.camera = game.world.camera;
+  constructor(game: ObstacleCourseGamePart2) {
+    this.camera = game.world.camera;
 
-      this.yaw.position.y = 0.75
+    this.yaw.position.y = 0.75
 
-      document.addEventListener('pointerlockchange', () => {
-        if (document.pointerLockElement === game.world.renderer.domElement) {
-          game.world.renderer.domElement.addEventListener('mousemove', this.onDocumentMouseMove)
-          game.world.renderer.domElement.addEventListener('wheel', this.onDocumentMouseWheel)
-        } else {
-          game.world.renderer.domElement.removeEventListener('mousemove', this.onDocumentMouseMove)
-          game.world.renderer.domElement.removeEventListener('wheel', this.onDocumentMouseWheel)
-        }
-      })
+    document.addEventListener('pointerlockchange', () => {
+      if (document.pointerLockElement === game.world.renderer.domElement) {
+        game.world.renderer.domElement.addEventListener('mousemove', this.onDocumentMouseMove)
+        game.world.renderer.domElement.addEventListener('wheel', this.onDocumentMouseWheel)
+      } else {
+        game.world.renderer.domElement.removeEventListener('mousemove', this.onDocumentMouseMove)
+        game.world.renderer.domElement.removeEventListener('wheel', this.onDocumentMouseWheel)
+      }
+    })
 
-      game.world.scene.add(this.pivot)
-      this.pivot.add(this.yaw)
-      this.yaw.add(this.pitch)
-      this.pitch.add(game.world.camera) // adding the perspective camera to the hierarchy
+    game.world.scene.add(this.pivot)
+    this.pivot.add(this.yaw)
+    this.yaw.add(this.pitch)
+    this.pitch.add(game.world.camera) // adding the perspective camera to the hierarchy
   }
 
   onDocumentMouseMove = (e: MouseEvent) => {
-      this.yaw.rotation.y -= e.movementX * 0.002
-      const v = this.pitch.rotation.x - e.movementY * 0.002
+    this.yaw.rotation.y -= e.movementX * 0.002
+    const v = this.pitch.rotation.x - e.movementY * 0.002
 
-      // limit range
-      if (v > -1 && v < 1) {
-          this.pitch.rotation.x = v
-      }
+    // limit range
+    if (v > -1 && v < 1) {
+      this.pitch.rotation.x = v
+    }
   }
 
   onDocumentMouseWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      const v = this.camera.position.z + e.deltaY * 0.005
+    e.preventDefault()
+    const v = this.camera.position.z + e.deltaY * 0.005
 
-      // limit range
-      if (v >= 0.5 && v <= 10) {
-          this.camera.position.z = v
-      }
+    // limit range
+    if (v >= 0.5 && v <= 10) {
+      this.camera.position.z = v
+    }
   }
 }
 
-
-
 class Player {
 
-  private game: ObstacleCourseGamePart1;
-  // private scene: any;
-  // private world: any;
+  private game: ObstacleCourseGamePart2;
+
   private body!: Body;
   private animationController!: AnimationController;
   private vector = _vector3.clone();
@@ -332,13 +331,11 @@ class Player {
   public  followTarget = _object3d.clone(); //new Mesh(new SphereGeometry(0.1), new MeshNormalMaterial())
   private grounded = true
   private rotationMatrix = _matrix4.clone();
-  private  targetQuaternion = _quaternion.clone();
+  private targetQuaternion = _quaternion.clone();
   private followCam: any;
-  // private keyboard: any;
   private wait = false;
 
-  // constructor(scene:THREE.Scene, camera: THREE.Camera, renderer:THREE.WebGLRenderer, world:any, position = [0, 0, 0]) {
-  constructor(game: ObstacleCourseGamePart1) {
+  constructor(game: ObstacleCourseGamePart2) {
     this.game = game;
     // this.scene = game.world.scene;
     // this.world = game.world;
@@ -359,8 +356,11 @@ class Player {
       collider: {
         shape: 'capsule', args: [0.5, 0.15], translation: [0, 0.645, 0], 
         mass:0.1, friction: 0, restitution: 0.5,
-        onCollisionEnter: () =>{ // activeEvents: 'COLLISION_EVENTS',
+        onCollisionEnter: (handle1: number, handle2: number) =>{ // activeEvents: 'COLLISION_EVENTS',
           this.setGrounded();
+          if ([handle1, handle2].includes(this.body?.rigidBody.handle)) {
+            // this.ui.showLevelCompleted()
+          }
         }
       }
     }, (body: Body) =>{
@@ -382,22 +382,27 @@ class Player {
 
   update(clock: ClockProps) {
     this.inputVelocity.set(0, 0, 0);
-
+    let limit = 1;
     if (this.grounded) {
       if (this.game.evListener.keyMap['KeyW'] || this.game.evListener.keyMap['ArrowUp']) {
-        this.inputVelocity.z = -1
+        this.inputVelocity.z = -1;
+        limit = 9.5;
       }
       if (this.game.evListener.keyMap['KeyS'] || this.game.evListener.keyMap['ArrowDown']) {
-        this.inputVelocity.z = 1
+        this.inputVelocity.z = 1;
+        limit = 9.5;
       }
       if (this.game.evListener.keyMap['KeyA'] || this.game.evListener.keyMap['ArrowLeft']) {
-        this.inputVelocity.x = -1
+        this.inputVelocity.x = -1;
+        limit = 9.5;
       }
       if (this.game.evListener.keyMap['KeyD'] || this.game.evListener.keyMap['ArrowRight']) {
-        this.inputVelocity.x = 1
+        this.inputVelocity.x = 1;
+        limit = 9.5;
       }
 
       this.inputVelocity.setLength(clock.delta * (this.animationController.speed || 1)) // limit horizontal movement based on walking or running speed
+      // this.inputVelocity.setLength(clock.delta * limit);
       if (!this.wait && this.game.evListener.keyMap['Space']) {
         this.wait = true
         this.body.rigidBody.setLinearDamping(0)
@@ -418,6 +423,12 @@ class Player {
 
     // now move the capsule body based on inputVelocity
     this.body.rigidBody.applyImpulse(this.inputVelocity, true)
+
+
+
+    if (this.body.rigidBody.translation().y < -3) {
+      this.reset()
+    }
 
     this.followTarget.position.copy(this.body.rigidBody.translation()) // Copy the capsules position to followTarget
     this.followTarget.getWorldPosition(this.vector) // Put followTargets new world position into a vector
@@ -445,6 +456,246 @@ class Player {
     // update which animationAction Eve should be playing
     this.animationController.update(clock.delta)
    
+  }
+
+  private reset() {
+    this.body.rigidBody.setLinvel(new THREE.Vector3(0, 0, 0), true)
+    this.body.rigidBody.setTranslation(new THREE.Vector3(0, 1, 0), true)
+    // this.ui.reset()
+  }
+}
+
+class Start {
+  private game:ObstacleCourseGamePart2;
+  private glTFLoader!: GLTFLoader;
+  private position: number[];
+  private material!: THREE.MeshStandardMaterial;
+  
+  constructor(game: ObstacleCourseGamePart2, position: number[]) {
+    this.glTFLoader = new GLTFLoader();
+    this.position = position;
+    this.game = game;
+    this.init();
+  }
+
+  async init() {
+    await this.game.world.addObjectFromGLTF({
+      url: '/assets/models/start.glb', 
+      props:[{
+        name:'Cylinder', 
+        mesh:{receiveShadow:true},
+        rapier: {
+          body: {type:'fixed', translation: [this.position[0], this.position[1], this.position[2]]},
+          collider: {shape: 'convexHull'},
+        }
+      }]
+    }, async (ele)=>{     
+      ele.forEach( (obj:any) =>{
+        this.material = <THREE.MeshStandardMaterial>(<THREE.Mesh>obj.mesh).material;
+        if(this.material && this.material.map) {
+          this.material.map?.center.set(0.1034, 0) // fixes slightly offset texture
+      
+          setInterval(() => {
+            if(this.material && this.material.map) {
+              this.material.map.rotation += Math.PI;
+            }
+          }, 500)
+        }
+      })
+    });
+  }
+}
+
+class Finish {
+  private game:ObstacleCourseGamePart2;
+  private position: number[];
+  private material!:THREE.MeshStandardMaterial;
+  private texture!:THREE.Texture;
+
+  constructor(game:ObstacleCourseGamePart2, position:number[]) {
+    this.game = game;
+    this.position = position;
+
+    this.init();
+  }
+
+  private async init() {
+    this.texture = new THREE.TextureLoader().load('/assets/images/finish.png', (texture) => {
+      texture.repeat.x = 2
+      texture.wrapS = THREE.RepeatWrapping
+      texture.flipY = true
+    })
+
+    const banner = new THREE.Mesh(
+        new THREE.CylinderGeometry(3.4, 3.4, 2, 12, 1, true),
+        new THREE.MeshPhongMaterial({ transparent: true, opacity: 0.75, map: this.texture, side: THREE.DoubleSide })
+    )
+    banner.position.set(...(this.position as [number, number, number]) );
+    banner.position.y += 3
+    this.game.world.scene.add(banner)
+
+    new GLTFLoader().load('/assets/models/finish.glb', async (gltf) => {
+        const mesh = <THREE.Mesh>gltf.scene.getObjectByName('Cylinder');
+        if(!mesh) { return};
+        mesh.traverse((m) => {
+            m.receiveShadow = true
+        })
+        this.game.world.scene.add(mesh)
+
+        this.material = <THREE.MeshStandardMaterial>mesh.material
+
+        const body: Body = new Body(this.game.world.rapier);
+        // const points = new Float32Array(mesh.geometry.attributes['position'].array)
+        await body.create({
+          body: {type: 'fixed', 
+            // translation: [...(this.position as [number, number, number])],
+            translation: [...this.position]
+            // translation: [0, 4, 10]
+          }, // , translation: new THREE.Vector3(0, -1, 0)
+          collider: {shape: 'convexHull'}, //, args:[...points]
+          object3d: mesh
+        });
+        
+        setInterval(() => {
+          if(this.material && this.material.map) {
+            this.material.map.rotation += Math.PI
+          }
+        }, 500)
+    })
+  }
+}
+
+
+class Spinner {
+  private game:ObstacleCourseGamePart2;
+  private position: number[];
+  private group!: THREE.Group;
+  private body!: RAPIER.RigidBody;
+  private handle = -1
+
+  constructor(game:ObstacleCourseGamePart2, position:number[]) {
+    this.game = game;
+    this.position = position;
+    this.init();
+  }
+
+  private async init() {
+    this.group = new THREE.Group()
+    // this.group.position.set(...this.position)
+    this.group.position.set(this.position[0],this.position[1], this.position[2])
+    
+    this.game.world.scene.add(this.group)
+
+    const verticleBar = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 1.5), new THREE.MeshStandardMaterial())
+    verticleBar.castShadow = true;
+    // verticleBar.position.set(this.position[0],this.position[1], this.position[2])
+    this.group.add(verticleBar)
+
+    const horizontalBar = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 4), new THREE.MeshStandardMaterial())
+    horizontalBar.rotateX(-Math.PI / 2)
+    horizontalBar.castShadow = true
+    this.group.add(horizontalBar)
+
+    const body: Body = new Body(this.game.world.rapier);
+    await body.create({
+      body: {type: 'kinematicPositionBased', 
+        translation: [this.position[0],this.position[1], this.position[2]],
+        rotation: new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0))
+      }, // , translation: new THREE.Vector3(0, -1, 0)
+      collider: {shape: 'cylinder', args:[2, 0.25]},
+      // object3d: horizontalBar
+    });
+
+    body.useFrame = (clock: any) => {
+      const delta = clock.delta;
+      this.group.rotation.y += delta
+
+      let quaternion = new THREE.Quaternion();
+      horizontalBar.getWorldQuaternion ( quaternion );
+
+      body.rigidBody.setNextKinematicRotation(quaternion);
+    };
+  }
+}
+
+class Pendulum {
+  private game:ObstacleCourseGamePart2;
+  private position: number[];
+  private rotationY: number;
+  dynamicBodies = []
+  handles = [-1, -1]
+
+  constructor(game:ObstacleCourseGamePart2, position:number[], rotationY = 0) {
+      this.game = game;
+      this.position = position;
+      this.rotationY = rotationY;
+      this.init();
+  }
+
+  private async init() {
+    const parents:any[] = [];
+    for (let i = 0; i < 4; i++) {
+
+      let rapierBodyType = 'dynamic';
+      if (i == 0) {
+        rapierBodyType = 'fixed';
+      }
+
+      await this.game.world.addObject({
+        geometry: {type: 'sphere', args: [0.4]}, // geometry 속성
+        material: {type: 'standard'}, // material 속성
+        mesh: {castShadow:true},
+        rapier: {
+          body: {type: rapierBodyType, translation: [this.position[0], this.position[1], i + this.position[2]], rotation: [0, this.rotationY, 0]},
+          collider: {shape: 'ball', mass: 1},
+        }, 
+      }, (mesh, body) => {
+        if (i >= 2) {
+          // will check for collisions with lowest 2 hanging balls in game.ts update loop
+          if(body) {
+            this.handles.push(body.rigidBody.handle);
+          }
+        }
+
+        if (i > 0) {
+          let parent = parents[parents.length - 1];
+          let params = RAPIER.JointData.spherical(new THREE.Vector3(0.0, 0.0, 0.0), new THREE.Vector3(0.0, 0.0, -1))
+          if(body) {
+            this.game.world.rapier.world.createImpulseJoint(params, parent, body.rigidBody, true);
+          }
+        }
+
+        parents.push(body?.rigidBody);
+
+      });
+    }
+  }
+}
+
+class Platform {
+  private game:ObstacleCourseGamePart2;
+  private size: number[];
+  private position: number[];
+  private rotation: number[];
+  constructor(game:ObstacleCourseGamePart2, size: number[], position: number[], rotation = [0, 0, 0]) {
+    this.game = game;
+    this.size = size;
+    this.position = position;
+    this.rotation = rotation;
+    this.init();
+  }
+
+  async init() {
+    await this.game.world.addObject({
+      geometry: {type: 'box', args: this.size}, // geometry 속성
+      material: {type: 'standard'}, // material 속성
+      mesh: {castShadow:true, receiveShadow: true},
+      rapier: {
+        body: {type: 'fixed', translation: this.position, rotation: this.rotation},
+        collider: {shape: 'cuboid'},
+      }, 
+    }, (mesh, body) => {
+    });
   }
 }
 
