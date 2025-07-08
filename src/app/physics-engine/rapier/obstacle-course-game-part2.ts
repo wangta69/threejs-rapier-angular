@@ -230,13 +230,13 @@ class Eve extends THREE.Group {
   private glTFLoader!: GLTFLoader;
 
   constructor() {
-      super()
+    super()
 
-      const dracoLoader = new DRACOLoader()
-      dracoLoader.setDecoderPath('/jsm/libs/draco/') // move draco from node_modules/three/examples/jsmm/libs/draco to public/jsm/libs/draco
+    const dracoLoader = new DRACOLoader()
+    dracoLoader.setDecoderPath('/jsm/libs/draco/') // move draco from node_modules/three/examples/jsmm/libs/draco to public/jsm/libs/draco
 
-      this.glTFLoader = new GLTFLoader()
-      this.glTFLoader.setDRACOLoader(dracoLoader)
+    this.glTFLoader = new GLTFLoader();
+    this.glTFLoader.setDRACOLoader(dracoLoader);
   }
 
   async init(animationActions: TanimationAction) {
@@ -485,7 +485,7 @@ class Start {
         name:'Cylinder', 
         mesh:{receiveShadow:true},
         rapier: {
-          body: {type:'fixed', translation: [this.position[0], this.position[1], this.position[2]]},
+          body: {type:'fixed', translation: [...this.position]},
           collider: {shape: 'convexHull'},
         }
       }]
@@ -534,35 +534,31 @@ class Finish {
     banner.position.y += 3
     this.game.world.scene.add(banner)
 
-    new GLTFLoader().load('/assets/models/finish.glb', async (gltf) => {
-        const mesh = <THREE.Mesh>gltf.scene.getObjectByName('Cylinder');
-        if(!mesh) { return};
-        mesh.traverse((m) => {
-            m.receiveShadow = true
-        })
-        this.game.world.scene.add(mesh)
 
-        this.material = <THREE.MeshStandardMaterial>mesh.material
-
-        const body: Body = new Body(this.game.world.rapier);
-        // const points = new Float32Array(mesh.geometry.attributes['position'].array)
-        await body.create({
-          body: {type: 'fixed', 
-            // translation: [...(this.position as [number, number, number])],
-            translation: [...this.position]
-            // translation: [0, 4, 10]
-          }, // , translation: new THREE.Vector3(0, -1, 0)
-          collider: {shape: 'convexHull'}, //, args:[...points]
-          object3d: mesh
-        });
-        
-        setInterval(() => {
-          if(this.material && this.material.map) {
-            this.material.map.rotation += Math.PI
-          }
-        }, 500)
-    })
+    await this.game.world.addObjectFromGLTF({
+      url: '/assets/models/finish.glb', 
+      props:[{
+        name:'Cylinder', 
+        mesh:{receiveShadow:true},
+        rapier: {
+          body: {type:'fixed', translation: [...this.position]},
+          collider: {shape: 'convexHull'},
+        }
+      }]
+    }, async (ele)=>{     
+      ele.forEach( (obj:any) =>{
+        this.material = <THREE.MeshStandardMaterial>(<THREE.Mesh>obj.mesh).material;
+        if(this.material && this.material.map) {
+          setInterval(() => {
+            if(this.material && this.material.map) {
+              this.material.map.rotation += Math.PI
+            }
+          }, 500)
+        }
+      })
+    });
   }
+  
 }
 
 
